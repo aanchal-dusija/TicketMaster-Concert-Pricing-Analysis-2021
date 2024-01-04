@@ -1,0 +1,444 @@
+---
+title: "project"
+author: "Ramdayal Rewaria"
+date: "2022-11-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# CLEARING THE ENVIRONMENT AND LOADING THE LIBRARIES
+rm(list=ls())
+library(tidyverse)
+library(ggplot2)
+library(tidyr)
+library(corrplot)
+library(patchwork)
+library(car)
+library(MASS)
+library(dplyr)
+library(gginference)
+```
+
+```{r}
+# READING THE DATA
+df = read_csv('ticketmaster-data.csv')
+```
+
+```{r}
+# VIEW DATA
+df
+```
+
+```{r}
+# CLEANING THE DATA
+df = df[df$pop != '???',]
+df
+```
+
+```{r}
+# UNIQUE ARTISTS
+cat('The number of unique artists:', length(unique(df$artist)))
+```
+
+```{r}
+# UNIQUE GENRES
+cat('The number of unique genres:', length(unique(df$genre)))
+```
+
+```{r}
+# UNIQUE CITIES
+cat('The number of unique cities:', length(unique(df$city)))
+```
+
+```{r}
+# NUMBER OF SHOWS ON WEEKEND
+cat('Number of shows on the weekend =', sum(df$weekend))
+```
+
+```{r}
+# NUMBER OF SHOWS ON WEEKDAYS
+cat('Number of shows on the weekdays =', nrow(df) - sum(df$weekend))
+```
+
+```{r}
+# SUMMARY OF DATA
+summary(df)
+```
+
+```{r}
+# CHECKING FOR MISSING VALUES
+colSums(is.na(df))
+```
+
+```{r}
+# REMOVING OUTLIERS
+quartiles <- quantile(df$minprice, probs=c(.25, .75), na.rm = FALSE)
+IQR <- IQR(df$minprice)
+ 
+Lower <- quartiles[1] - 1.5*IQR
+Upper <- quartiles[2] + 1.5*IQR 
+ 
+df <- subset(df, df$minprice > Lower & df$minprice < Upper)
+dim(df)
+```
+
+```{r}
+
+# ggplot(data = df, aes(x = factor(0), y = pop)) +
+#   theme_classic()+
+#   geom_boxplot(fill='lightblue') + coord_cartesian(ylim = c(0, 1500000)) + 
+#   theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())
+
+
+# ggplot(data = df, aes(x = factor(0), y = minprice)) +
+#   theme_classic()+
+#   geom_boxplot(fill='lightblue') + coord_cartesian(ylim = c(0, 100)) + 
+#   theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())
+# 
+# 
+# ggplot(data = df, aes(x = factor(0), y = score)) +
+#   theme_classic()+
+#   geom_boxplot(fill='lightblue') + coord_cartesian(ylim = c(60, 100)) + 
+#   theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())
+```
+
+```{r}
+df$pop<-as.numeric(df$pop)
+
+
+```
+
+
+```{r}
+# CONVERT WEEKEND AND MONTH TO FACTOR
+df$weekend = as.factor(df$weekend)
+df$month = as.factor(df$month)
+```
+
+```{r}
+# 
+ggplot(df, aes(x=score))+
+  theme_classic()+
+  geom_histogram(color="black", fill="lightblue", binwidth = 5)+
+  ggtitle("Weekend Artist Score Count" )+
+  theme(plot.title = element_text(hjust = 0.5))+
+  facet_grid(weekend ~ .)
+```
+
+```{r}
+# 
+ggplot(df, aes(x=score, color = month))+
+  theme_classic()+
+  ggtitle("Monthly Artists Score count" )+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_histogram(fill="white", binwidth = 5)
+```
+```{r}
+ggplot(df, aes(x=score, color = genre))+
+  theme_classic()+
+  ggtitle("Artist Score count for Genre" )+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_histogram(fill="white", binwidth = 5)
+```
+
+```{r}
+#to check the popularity of genre
+ggplot(data=df, aes(x=genre, y=score, color=genre)) +
+  theme_classic()+
+  ggtitle("Histogran for Genre v/s Artist Score" )+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")+
+  geom_bar(stat="identity") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+```{r}
+#To see which variables are correlated
+df1<-df[,c("weekend","pop","score","minprice")]
+df1$pop = as.factor(df1$pop)
+typeof(df1)
+df1$pop = as.numeric(df1$pop)
+df1$weekend = as.numeric(df1$weekend)
+
+print(sapply(df1,class))
+```
+
+```{r}
+M = cor(df1)
+corrplot(M, method = 'number')
+#None of the attributes are significantly related
+```
+
+```{r}
+ggplot(df, aes(x = score, y = minprice, color = weekend))+
+  theme_classic()+
+  ggtitle("Artist Score v/s Minprice for Weekend" )+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_line()
+```
+
+```{r}
+ggplot(df, aes(x = score, y = minprice, color = month))+
+  theme_classic()+
+  ggtitle("Artist Score v/s Minprice for Month" )+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_line()
+```
+
+```{r}
+ggplot(df, aes(x = score, y = minprice, color = genre))+
+  theme_classic()+
+  ggtitle("Artist Score v/s Minprice for Genre" )+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_line()
+```
+
+```{r}
+ggplot(df, aes(month, minprice, color = month))+
+  theme_classic()+
+  ggtitle("Month v/s Minprice for Month" )+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_boxplot()
+```
+```{r fig.height=5, fig.width=8, warning=FALSE}
+#TOP 5 ARTIST with Max Min Price 
+top_10_artist = df[order(-df$minprice), ]
+top_10_artist = head(top_10_artist, 10); top_10_artist
+a=ggplot(top_10_artist, 
+         aes(x=top_10_artist$artist,
+             y= top_10_artist$genre))+
+  theme_classic()+
+  geom_bar(stat="identity",color="black", fill="#BBDEFB")+
+  ggtitle("Genre")+xlab(NULL)+ylab(NULL)
+b=ggplot(top_10_artist, 
+         aes(x=top_10_artist$artist,
+             y= top_10_artist$score))+
+  theme_classic()+
+  geom_bar(stat="identity",color="black", fill="#BBDEFB")+
+  ggtitle("Score")+xlab(NULL)+ylab(NULL)
+c=ggplot(top_10_artist, 
+         aes(x=top_10_artist$artist,
+             y= top_10_artist$pop))+
+  theme_classic()+
+  geom_bar(stat="identity",color="black", fill="#BBDEFB")+
+  ggtitle("Population")+xlab(NULL)+ylab(NULL)
+d= ggplot(top_10_artist, 
+          aes(x=top_10_artist$artist,
+              y= top_10_artist$city))+
+  theme_classic()+
+  geom_bar(stat="identity",color="black", fill="#BBDEFB")+
+  ggtitle("City")+xlab(NULL)+ylab(NULL)
+
+all = (a+b)/(c+d) +
+  plot_annotation(title="Distribution of Maximum of Minimum Price For Top 10 Artists")&theme(plot.title = element_text(hjust = 0.5))
+all
+```
+```{r fig.height=5, fig.width=8, warning=FALSE}
+#LEAST 5 ARTIST with Max Min Price 
+least_10_artist = df[order(df$minprice), ]
+least_10_artist = head(least_10_artist, 10); least_10_artist
+a=ggplot(least_10_artist, 
+         aes(x=least_10_artist$artist,
+             y= least_10_artist$genre))+
+  theme_classic()+
+  geom_bar(stat="identity",color="black", fill="#BBDEFB")+
+  ggtitle("Genre")+xlab(NULL)+ylab(NULL)
+b=ggplot(least_10_artist, 
+         aes(x=least_10_artist$artist,
+             y= least_10_artist$score))+
+  theme_classic()+
+  geom_bar(stat="identity",color="black", fill="#BBDEFB")+
+  ggtitle("Score")+xlab(NULL)+ylab(NULL)
+c=ggplot(least_10_artist, 
+         aes(x=least_10_artist$artist,
+             y= least_10_artist$pop))+
+  theme_classic()+
+  geom_bar(stat="identity",color="black", fill="#BBDEFB")+
+  ggtitle("Population")+xlab(NULL)+ylab(NULL)
+d= ggplot(least_10_artist, 
+          aes(x=least_10_artist$artist,
+              y= least_10_artist$city))+
+  theme_classic()+
+  geom_bar(stat="identity",color="black", fill="#BBDEFB")+
+  ggtitle("City")+xlab(NULL)+ylab(NULL)
+
+all = (a+b)/(c+d) +
+  plot_annotation(title="Distribution of Minimum of Minimum Price For Least 10 Artists")&theme(plot.title = element_text(hjust = 0.5))
+all
+```
+
+```{r}
+# T-TESTING ANALYSIS
+#Does the average minimum price is larger for Ed Sheeran than that of G-Eazy ?
+
+# keeping the artists which are needed for our analysis
+df3 <-df %>% filter(artist %in% c("G-Eazy", "Ed Sheeran"))
+
+#Let μG= mean minimum price of G-Eazy and μE= mean minimum price of Ed Sheeran.
+#Null hypothesis, H0:μE−μG=0 
+#Alternative hypothesis, Ha:μE−μG>0.
+
+Ed_Sheeran <- subset(df3, select=minprice,subset=artist=="Ed Sheeran", drop=T)
+G_Eazy <- subset(df3, select=minprice, subset=artist=="G-Eazy", drop=T)
+
+t_test  = t.test(Ed_Sheeran, G_Eazy, alt="greater"); t_test
+ggttest(t_test)
+
+#Since p value is less than 0.05, At 5% significance level, we have enough evidence to reject the null hypothesis. Therefore there is strong evidence that the mean minimum price of Ed Sheeran and G-Eazy were not the same but in fact the average minimum price of Ed Sheerant were greater than the average minimum price of G-Eazy.
+```
+
+
+```{r}
+#BOOTSTRAP TEST
+G_Eazy <- df3[df3$artist == 'G-Eazy',]$minprice
+Ed_Sheeran <- df3[df3$artist == 'Ed Sheeran',]$minprice
+
+n_G_Eazy <- length(G_Eazy)
+n_Ed_Sheeran <- length(Ed_Sheeran)
+
+bootstrap_G_Eazy <- replicate(10000,mean(sample(G_Eazy , n_G_Eazy , replace = T)))
+bootstrap_Ed_Sheeran <- replicate(10000,mean(sample(Ed_Sheeran , n_Ed_Sheeran , replace = T)))
+
+ratio.mean <- bootstrap_G_Eazy/bootstrap_Ed_Sheeran
+
+
+quantile(ratio.mean, c(0.025, 0.975))
+
+#At 95% bootstrap percentile interval,mean ratio of G-Eazy’s minimum price to Ed Sheeran’s minimum price is between 0.7332200 and 0.8629818. Hence, we reject the null hypothesis.
+```
+
+```{r}
+# CHI-SQUARE ANLYSIS
+#Does the minprice depend on popularity
+#H0 - Minprice and popularity are independent
+#H1 - Minprice and popularity are not independent
+df2 = table(df$minprice, df$score)
+chi_square_test = chisq.test(df2); 
+chi_square_test
+
+#reject H1 and accept H0
+```
+
+```{r}
+# YATES CORRECTION
+chi_square_test1 = chisq.test(df2, correct = TRUE, simulate.p.value = TRUE);
+chi_square_test1
+```
+
+```{r}
+# ONE WAY ANOVA TESTING
+#H0 : There is no impact of the artist on the minprice
+#H1 : There is an impact of the artist on the minprice
+
+
+anova_minprice_pop = aov(minprice ~ artist, data = df)
+summary(anova_minprice_pop)
+
+#p Value is much lesser than 0.05, therefore H0 is rejected and H1 is accepted.
+```
+
+```{r}
+# TWO WAY ANOVA
+df$city<- as.factor(df$city)
+df$weekend<-as.factor(df$weekend)
+
+# Hypothesis
+# H0: Min price is not affected by weekend and city
+# H1: Min Price is affected by weekend and city
+anova1<-aov(minprice~weekend+city, data=df)
+summary(anova1)
+
+# City is a significant variable while weekend is not a significant variable.
+
+anova2<- aov(minprice~weekend*city, data=df)
+summary(anova2)
+
+# Here we see that additionally the interaction effect is a significant vriable as well.
+```
+
+
+```{r}
+# Assumptions of regression
+# LINEAR REGRESSION MODEL 1
+
+lin_reg<-lm(minprice~pop, data = df)
+summary(lin_reg)
+pred <- predict(lin_reg)
+rmse <- sqrt(mean((pred-df$minprice)^2));rmse
+
+# Assumption 1: LINEARITY OF THE DATA
+plot(lin_reg, 1)
+# Since there is no pattern, there is a linear relationship between population and min price.
+
+# Assumption 2: Residual errors have mean value = zero
+plot(lin_reg, 2)
+shapiro.test(lin_reg$residuals)
+# Residual errors are normally distributed since p-value > 0.05.
+
+# Assumption 3: Residual errors have constant variance
+plot(lin_reg, 3)
+ncvTest(lin_reg)
+# we can see that the residual points are not all equally spread out. p < .05, suggesting that our data is not homoscedastic.
+
+```
+
+```{r}
+# LINEAR REGRESSION MODEL 2
+full_mod = lm(minprice~.,data=df)
+summary(full_mod)
+pred <- predict(full_mod)
+rmse <- sqrt(mean((pred-df$minprice)^2));rmse
+
+# Assumption 1: LINEARITY OF THE DATA
+plot(full_mod, 1)
+# Since there is no pattern, there is a linear relationship between the variables and min price.
+
+# Assumption 2: Residual errors have mean value = zero
+plot(full_mod, 2)
+shapiro.test(full_mod$residuals)
+# Residual errors are not normally distributed since p-value < 0.05.
+
+# Assumption 3: Residual errors have constant variance
+plot(full_mod, 3)
+ncvTest(full_mod)
+# we can see that the residual points are not all equally spread out. p < .05, suggesting that our data is not homoscedastic.
+
+# Assumption 4: Multicollinearity
+durbinWatsonTest(full_mod)
+# There is multicollinearity
+```
+
+```{r}
+# LINEAR REGRESSION MODEL 3
+model <- lm(minprice ~ artist + venue + genre + month, data = df)
+summary(model)
+pred <- predict(model)
+rmse <- sqrt(mean((pred-df$minprice)^2));rmse
+
+# Assumption 1: LINEARITY OF THE DATA
+plot(model, 1)
+# Since there is no pattern, there is a linear relationship between the variables and min price.
+
+# Assumption 2: Residual errors have mean value = zero
+plot(model, 2)
+shapiro.test(model$residuals)
+# Residual errors are not normally distributed since p-value < 0.05.
+
+# Assumption 3: Residual errors have constant variance
+plot(model, 3)
+ncvTest(model)
+# we can see that the residual points are not all equally spread out. p < .05, suggesting that our data is not homoscedastic.
+
+# Assumption 4: Multicollinearity
+durbinWatsonTest(model)
+# There is multicollinearity.
+
+# The predictive power of the model 
+# Every variable is not significant but is adding to the predictive power of the model
+# Artist, venue explain the highest amount in min price as you can see the rmse of the model as it explains the most variation
+# diff in rmse of all 3 models
+
+```
